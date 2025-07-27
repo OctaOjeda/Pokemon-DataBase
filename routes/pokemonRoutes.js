@@ -1,38 +1,55 @@
 const express = require('express');
-const router = express.Router();
 const Pokemon = require('../models/Pokemon');
+const auth = require('../middleware/authMiddleware');
+const router = express.Router();
 
-// GET all pokemon
-router.get('/pokemon', async (req, res) => {
-  const pokemon = await Pokemon.find();
+// Crear Pokémon (requiere login)
+router.post('/', auth, async (req, res) => {
+  try {
+    const pokemon = new Pokemon({ ...req.body, owner: req.user.id });
+    await pokemon.save();
+    res.status(201).json(pokemon);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Obtener todos
+router.get('/', async (req, res) => {
+  const pokemons = await Pokemon.find().populate('owner', 'username');
+  res.json(pokemons);
+});
+
+// Obtener uno
+router.get('/:id', async (req, res) => {
+  const pokemon = await Pokemon.findById(req.params.id);
+  if (!pokemon) return res.status(404).json({ error: 'No encontrado' });
   res.json(pokemon);
 });
 
-// GET item by ID
-router.get('/pokemon/:id', async (req, res) => {
-  const item = await Pokemon.findById(req.params.id);
-  if (!item) return res.status(404).json({ message: 'Pokemon not found' });
-  res.json(item);
+// Editar
+router.put('/:id', auth, async (req, res) => {
+  const pokemon = await Pokemon.findById(req.params.id);
+  if (!pokemon) return res.status(404).json({ error: 'No encontrado' });
+
+  if (pokemon.owner.toString() !== req.user.id)
+    return res.status(403).json({ error: 'No autorizado' });
+
+  Object.assign(pokemon, req.body);
+  await pokemon.save();
+  res.json(pokemon);
 });
 
-// POST create new item
-router.post('/pokemon', async (req, res) => {
-  const { name, types, class: className } = req.body;
-  const newPokemon = new Pokemon({ name, types, class: className });
-  await newPokemon.save();
-  res.status(201).json(newPokemon);
-});
+// Borrar
+router.delete('/:id', auth, async (req, res) => {
+  const pokemon = await Pokemon.findById(req.params.id);
+  if (!pokemon) return res.status(404).json({ error: 'No encontrado' });
 
-// PUT update item
-router.put('/pokemon/:id', async (req, res) => {
-  const updated = await Pokemon.findByIdAndUpdate(req.params.id, req.body, { new: true });
-  res.json(updated);
-});
+  if (pokemon.owner.toString() !== req.user.id)
+    return res.status(403).json({ error: 'No autorizado' });
 
-// DELETE item
-router.delete('/pokemon/:id', async (req, res) => {
-  await Pokemon.findByIdAndDelete(req.params.id);
-  res.status(204).end();
+  await pokemon.remove();
+  res.json({ message: 'Eliminado' });
 });
 
 module.exports = router;
