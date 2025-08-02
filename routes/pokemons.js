@@ -32,8 +32,8 @@ router.put('/:id', auth, async (req, res) => {
   const pokemon = await Pokemon.findById(req.params.id);
   if (!pokemon) return res.status(404).json({ error: 'No encontrado' });
 
-  if (pokemon.owner.toString() !== req.user.id)
-    return res.status(403).json({ error: 'No autorizado' });
+  // if (pokemon.owner.toString() !== req.user.id)
+  //   return res.status(403).json({ error: 'No autorizado' });
 
   Object.assign(pokemon, req.body);
   await pokemon.save();
@@ -45,10 +45,10 @@ router.delete('/:id', auth, async (req, res) => {
   const pokemon = await Pokemon.findById(req.params.id);
   if (!pokemon) return res.status(404).json({ error: 'No encontrado' });
 
-  if (pokemon.owner.toString() !== req.user.id)
-    return res.status(403).json({ error: 'No autorizado' });
+  // if (pokemon.owner.toString() !== req.user.id)
+  //   return res.status(403).json({ error: 'No autorizado' });
 
-  await pokemon.remove();
+  await pokemon.deleteOne(pokemon)
   res.json({ message: 'Eliminado' });
 });
 
